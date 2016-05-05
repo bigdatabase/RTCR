@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-dark.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>RTCR by uubram</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>RTCR</h1>
+          <h2>A pipeline for complete and accurate recovery  of TCR repertoires from high throughput sequencing data.</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/uubram/RTCR/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/uubram/RTCR/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/uubram/RTCR" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a id="rtcr" class="anchor" href="#rtcr" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>rtcr</h1>
+
+<p>Recover T Cell Receptor (RTCR) is a pipeline for complete and accurate recovery
+of TCR repertoires from high throughput sequencing data.</p>
+
+<h1>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation</h1>
+
+<p>RTCR requires an external aligner, we have chosen for Bowtie 2, but if you
+would like to use your own, read the section "switching aligners".</p>
+
+<p>1) Install Bowtie 2</p>
+
+<p>Please go to <a href="http://bowtie-bio.sourceforge.net/bowtie2/index.shtml">http://bowtie-bio.sourceforge.net/bowtie2/index.shtml</a> and follow
+the instructions on how to download and install Bowtie 2.</p>
+
+<p>2) Install the RTCR package (<a href="http://uubram.github.io/RTCR/">http://uubram.github.io/RTCR/</a>)</p>
+
+<p>Download the zip file and extract it. Open a terminal and go to the newly
+extracted RTCR folder and run::</p>
+
+<pre><code>    python setup.py install
+</code></pre>
+
+<p>Or if there are permission issues (e.g. not having root access) run::</p>
+
+<pre><code>    python setup.py install --user
+</code></pre>
+
+<p>To test if everything went well, type "rtcr" (and press enter). This should
+result in a help being printed showing the command line options of RTCR.</p>
+
+<p>3) Configure RTCR</p>
+
+<p>RTCR needs to know where Bowtie 2 is installed, specifically it needs to know
+the directory where the 'bowtie2-build' and 'bowtie2' executables reside::</p>
+
+<pre><code>    rtcr Config Aligner.location=/path/to/bowtie2/
+</code></pre>
+
+<p>For more details on configuring RTCR, see the "Configuration" section</p>
+
+<h1>
+<a id="quick-start" class="anchor" href="#quick-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Quick start</h1>
+
+<p>Analysing the non-barcoded sample::</p>
+
+<pre><code>    mkdir my_analysis
+    cd my_analysis
+    rtcr run -i ../reads.fq.gz
+</code></pre>
+
+<p>Analysing the barcoded sample::</p>
+
+<pre><code>    mkdir my_barcoded_analysis
+    cd my_barcoded_analysis
+    rtcr Checkout -rc -b ../barcodes.txt -i ../umi_reads.fq.gz
+    rtcr umi_group_ec -i S1.fastq -o S1_umi_group_ec.fastq
+    rtcr run -i S1_umi_group_ec.fastq
+</code></pre>
+
+<h1>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h1>
+
+<p>RTCR has a single entry-point, the "rtcr" command, with which everything is
+run. With different arguments, RTCR can be configured, instructed to do barcode
+error correction, or run an analysis.</p>
+
+<p>RTCR takes FastaQ files as input. These files can be zipped to save disk space.
+As an example, let us assume you have a zipped dataset called "reads.fastq.gz"
+in a directory "/data", and the reads are from a human TcR-beta repertoire.</p>
+
+<p>First, create an empty directory, for example::</p>
+
+<pre><code>    cd /data
+    mkdir my_analysis
+    cd my_analysis
+</code></pre>
+
+<p>Now we can analyse the dataset as follows::</p>
+
+<pre><code>    rtcr run --reads ../reads.fastq.gz
+</code></pre>
+
+<p>RTCR will produce several files (see "Output files" section for more details),
+but the retrieved clones will end up in a tab-delimited file called
+"results.tsv". If something went wrong, please check the "rtcr.log" file in the
+same directory.</p>
+
+<p>.. IMPORTANT::</p>
+
+<pre><code>    Start analyses in an empty folder. If the alignments file
+    "alignments.sam.gz" already exists, RTCR will *not* perform alignments
+    and use this file instead.
+</code></pre>
+
+<p>.. NOTE::</p>
+
+<pre><code>    If you have a paired-end HTS dataset, please merge the read-pairs first
+    using a program such as pear
+    (http://sco.h-its.org/exelixis/web/software/pear/).
+</code></pre>
+
+<p>To use a different germline reference, for example to analyse a mouse TcR-alpha
+repertoire HTS dataset (e.g. "mouse.fastq"), use the "--species" and "--gene"
+options as follows::</p>
+
+<pre><code>    rtcr run --reads mouse.fastq --species MusMusculus --gene TRA
+</code></pre>
+
+<p>Finally, if you want to prevent RTCR from merging clones with the same CDR3 but
+different VJ combination, use the "--no_VJ_collapsing" option.</p>
+
+<h1>
+<a id="output-files" class="anchor" href="#output-files" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Output files</h1>
+
+<p>The "rtcr run" command produces many files, each of these will be explained
+below:</p>
+
+<ul>
+<li><p>alignments.sam.gz
+    SAM records from the aligner, with alignments between the
+    germline V and J sequences and the reads. The VJ alignments to the
+    reads occur together, starting with the V alignments. Hence, the first
+    record is a V alignment, the second a J alignment to the same read.</p></li>
+<li><p>aln_stats.csv
+    Alignments statistics for the different sequence lengths
+    (CDR3 by default; "seqlen" column), counting the number of bases ("n"),
+    mismatches ("mm"), insertions ("ins"), and deletions ("dels")
+    encountered in the alignments of the V or J ("region" column). This
+    data is used to calculate the various error rates that RTCR uses.</p></li>
+<li><p>Q_mm_stats.csv
+    For the V and J region alignments ("region" column), the
+    number of bases ("n"), and number of mismatches ("mm") found of
+    the bases having a certain Phred score ("Q"). This data is used by
+    RTCR to calculate a normalization factor.</p></li>
+<li><p>Q_mm_stats_plot.pdf
+    Graphical representation of Q_mm_stats.csv. This file is not created
+    if matplotlib is not installed.</p></li>
+<li><p>r.tsv
+    Raw clones identified by RTCR before error correction.</p></li>
+<li><p>rqi.tsv
+    Clones after QMerge and IMerge algorithms have run.</p></li>
+<li><p>rqil.tsv
+    Clones after QMerge, IMerge, and LMerge algorithms have run.</p></li>
+<li><p>results.tsv
+    Final list of clones after error correction and post-processing.</p></li>
+</ul>
+
+<h1>
+<a id="analysing-a-barcoded-hts-dataset" class="anchor" href="#analysing-a-barcoded-hts-dataset" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Analysing a barcoded HTS dataset</h1>
+
+<p>First RTCR needs to identify the unique molecular identifiers (UMIs) in the
+reads. For this it requires the sequence of the primer(s) that contain the UMI.
+Let's assume we have a barcoded HTS dataset ("umi_reads.fastq") with one sample
+and a 12bp long UMI.</p>
+
+<p>For this create a file call "barcodes.txt" with the following contents::</p>
+
+<pre><code>    S1      aagcagtggtaTCAACGcagagNNNNNNNNNNNNcttggggg
+</code></pre>
+
+<p>In the first column is the name of the sample, here "S1". The second column,
+separated from the first by a tab, contains the primer sequence where the "N"
+bases denote the location of the UMI. To look for the UMI, RTCR will search the
+read for a 'seed' sequence, that is indicated in the primer by a stretch of
+upper case bases (non-N). In the above it is "TCAACG". This seed sequence is
+required as RTCR will search the read for a perfect match to this sequence, and
+then search for the remaining lower-case DNA bases. By default there are only
+2 mismatches allowed in the lower-case bases. To ask RTCR to search for the
+UMIs, run::</p>
+
+<pre><code>    rtcr Checkout -i reads.fastq -b barcodes.txt -rc
+</code></pre>
+
+<p>The "-rc" switch is used to tell RTCR to also look for the UMI in the reverse
+complement of the reads. The above should create a file called "S1.fastq". This
+file contains the reads in which RTCR managed to identify a UMI.</p>
+
+<p>Next, to perform barcode error correction::</p>
+
+<pre><code>    rtcr umi_group_ec -i S1.fastq -o S1_umi_group_ec.fastq
+</code></pre>
+
+<p>The "S1_umi_group_ec.fastq" file contains the barcode error corrected reads.
+After this one can perform the regular HTS analysis the same as for
+non-barcoded HTS datasets::</p>
+
+<pre><code>    rtcr run --reads S1_umi_group_ec.fastq
+</code></pre>
+
+<h1>
+<a id="configuration" class="anchor" href="#configuration" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Configuration</h1>
+
+<p>RTCR can be easily configured using the "rtcr Config" command. To find out its
+usage, type::</p>
+
+<pre><code>    rtcr Config -h
+</code></pre>
+
+<p>To see the entire configuration file (can be big), type::</p>
+
+<pre><code>    rtcr Config
+</code></pre>
+
+<p>If you'd rather edit the config file directly, search for the "config.ini" file
+in the "RTCR" folder of the package.</p>
+
+<p>The ini file contains different sections, denoted with the brackets "[" and
+"]". These sections contain the different settings of RTCR. To check the value
+of a setting, say for example the default germline reference gene, type the
+name of its corresponding section and name of the key (in this case it is
+the key "gene" in section "Defaults")::</p>
+
+<pre><code>    rtcr Config Defaults.gene
+</code></pre>
+
+<p>The above should print out "TRB". Let's for example change this default to
+TCR alpha chains::</p>
+
+<pre><code>    rtcr Config Defaults.gene=TRA
+</code></pre>
+
+<h1>
+<a id="switching-aligners" class="anchor" href="#switching-aligners" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Switching aligners</h1>
+
+<p>To run rtcr with a different aligner, the values in the "[Aligner]" section
+of its configuration file (see "Configuration") should be updated. There are
+several requirements for the new aligner:
+1) It should support receiving FastaQ records via stdin (standard in)
+2) It should support writing SAM file format output to stdout (standard out)</p>
+
+<p>If the aligner can do those things, then tell RTCR where the aligner is
+located with the "location" key. If the aligner does not build an
+index, empty out the corresponding keys as follows::</p>
+
+<pre><code>    rtcr Config Aligner.cmd_build_index=
+    rtcr Config Aligner.args_build_index=
+</code></pre>
+
+<p>The "args_XXX" keys are arguments that RTCR passes to commands given in the
+"cmd_XXX" keys. Before alignment, RTCR produces a reference fasta file from the
+germline reference and passes this (using the "args_build_index" key) to the
+command to build an index ("cmd_build_index" key).  The "%(ref_fn)s" and
+"%(index_fn)s" in the "args_build_index" key refer to the reference fasta file
+and index filenames that RTCR uses internally.</p>
+
+<p>RTCR first aligns the V genes to the reads and then the J genes. It is possible
+to run the aligner with different arguments for both with the "args_align_v"
+and "args_align_j" keys respectively. Any arguments that are the same for both
+can be put in "args_align_base". The "%phred_encoding)s" and "%(n_threads)s"
+parts of the arguments will contain the phred encoding (33 or 64) and number
+of threads respectively. It is optional to use these in the arguments.</p>
+        </section>
+
+        <footer>
+          RTCR is maintained by <a href="https://github.com/uubram">uubram</a><br>
+          This page was generated by <a href="https://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
